@@ -26,7 +26,7 @@ import (
 	"strings"
 	"syscall"
 
-	"k8s.io/kubectl/pkg/cmd/flags"
+	"github.com/openziti-incubator/kubectl/pkg/cmd/flags"
 
 	"github.com/spf13/cobra"
 
