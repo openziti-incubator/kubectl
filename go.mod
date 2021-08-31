@@ -58,4 +58,4 @@ replace (
 	k8s.io/metrics => k8s.io/metrics v0.0.0-20210825042829-1468ab25f472
 )
 
-replace k8s/kubectl => github.com/openziti-incubator/kubectl v0.22.1
+replace k8s.io/kubectl => github.com/openziti-incubator/kubectl v0.22.1
