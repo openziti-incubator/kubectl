@@ -1,6 +1,6 @@
 // This is a generated file. Do not edit directly.
 
-module kubectl
+module k8s.io/kubectl
 
 go 1.16
 
@@ -26,7 +26,6 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/russross/blackfriday v1.5.2
-	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
@@ -40,7 +39,6 @@ require (
 	k8s.io/component-helpers v0.22.1
 	k8s.io/klog/v2 v2.9.0
 	k8s.io/kube-openapi v0.0.0-20210817084001-7fbd8d59e5b8
-	k8s.io/kubectl v0.22.1
 	k8s.io/metrics v0.22.1
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a
 	sigs.k8s.io/kustomize/kustomize/v4 v4.2.0
