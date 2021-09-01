@@ -54,7 +54,7 @@ func main() {
 	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
 	kubeConfigFlags.WrapConfigFn = wrapConfigFn
 
-	command := cmd.NewDefaultKubectlCommandWithArgs(cmd.NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes), os.Args, os.Stdin, os.Stdout, os.Stderr, kubeConfigFlags)
+	command := cmd.NewDefaultKubectlCommandWithArgsAndConfigFlags(cmd.NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes), os.Args, os.Stdin, os.Stdout, os.Stderr, kubeConfigFlags)
 	command = setZitiFlags(command)
 	command.PersistentFlags().Parse(os.Args)
 

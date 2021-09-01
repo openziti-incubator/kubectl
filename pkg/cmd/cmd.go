@@ -84,12 +84,16 @@ const kubectlCmdHeaders = "KUBECTL_COMMAND_HEADERS"
 
 // NewDefaultKubectlCommand creates the `kubectl` command with default arguments
 func NewDefaultKubectlCommand() *cobra.Command {
-	return NewDefaultKubectlCommandWithArgs(NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes), os.Args, os.Stdin, os.Stdout, os.Stderr, nil)
+	return NewDefaultKubectlCommandWithArgs(NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes), os.Args, os.Stdin, os.Stdout, os.Stderr)
+}
+
+func NewDefaultKubectlCommandWithArgs(pluginHandler PluginHandler, args []string, in io.Reader, out, errout io.Writer) *cobra.Command {
+	return NewDefaultKubectlCommandWithArgsAndConfigFlags(pluginHandler, args, in, out, errout, nil)
 }
 
 // NewDefaultKubectlCommandWithArgs creates the `kubectl` command with arguments
-func NewDefaultKubectlCommandWithArgs(pluginHandler PluginHandler, args []string, in io.Reader, out, errout io.Writer, kubeConfigFlags *genericclioptions.ConfigFlags) *cobra.Command {
-	cmd := NewKubectlCommand(in, out, errout, kubeConfigFlags)
+func NewDefaultKubectlCommandWithArgsAndConfigFlags(pluginHandler PluginHandler, args []string, in io.Reader, out, errout io.Writer, kubeConfigFlags *genericclioptions.ConfigFlags) *cobra.Command {
+	cmd := NewKubectlCommandWithConfigFLags(in, out, errout, kubeConfigFlags)
 
 	if pluginHandler == nil {
 		return cmd
@@ -216,8 +220,12 @@ func HandlePluginCommand(pluginHandler PluginHandler, cmdArgs []string) error {
 	return nil
 }
 
+func NewKubectlCommand(in io.Reader, out, err io.Writer) *cobra.Command {
+	return NewKubectlCommandWithConfigFLags(in, out, err, nil)
+}
+
 // NewKubectlCommand creates the `kubectl` command and its nested children.
-func NewKubectlCommand(in io.Reader, out, err io.Writer, kubeConfigFlags *genericclioptions.ConfigFlags) *cobra.Command {
+func NewKubectlCommandWithConfigFLags(in io.Reader, out, err io.Writer, kubeConfigFlags *genericclioptions.ConfigFlags) *cobra.Command {
 	warningHandler := rest.NewWarningWriter(err, rest.WarningWriterOptions{Deduplicate: true, Color: term.AllowsColorOutput(err)})
 	warningsAsErrors := false
 	// Parent command to which all subcommands are added.
