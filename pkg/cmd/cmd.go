@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"kubectl/pkg/cmd/flags"
 	"os"
 	"os/exec"
 	"runtime"
@@ -54,6 +53,7 @@ import (
 	cmdexec "k8s.io/kubectl/pkg/cmd/exec"
 	"k8s.io/kubectl/pkg/cmd/explain"
 	"k8s.io/kubectl/pkg/cmd/expose"
+	"k8s.io/kubectl/pkg/cmd/flags"
 	"k8s.io/kubectl/pkg/cmd/get"
 	"k8s.io/kubectl/pkg/cmd/label"
 	"k8s.io/kubectl/pkg/cmd/logs"
@@ -292,6 +292,7 @@ func NewKubectlCommand(in io.Reader, out, err io.Writer, wrapConfigFn func(restC
 
 	cmds.PersistentFlags().StringVarP(&zFlags.ZConfig, "ZConfig", "c", "", "Path to ziti config file")
 	cmds.PersistentFlags().StringVarP(&zFlags.Service, "Service", "S", "", "Service name")
+	cmds.PersistentFlags().BoolVarP(&zFlags.Debug, "Debug", "d", false, "Set debug level logging")
 
 	// Proxy command is incompatible with CommandHeaderRoundTripper, so
 	// clear the WrapConfigFn before running proxy command.
