@@ -20,13 +20,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"kubectl/pkg/cmd/flags"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 	"syscall"
-
-	"k8s.io/kubectl/pkg/cmd/flags"
 
 	"github.com/spf13/cobra"
 
