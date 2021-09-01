@@ -43,8 +43,8 @@ var configFilePath string
 var serviceName string
 
 type ZitiFlags struct {
-	ZConfig string
-	Service string
+	zConfig string
+	service string
 }
 
 var zFlags = ZitiFlags{}
@@ -58,8 +58,8 @@ func main() {
 	command = setZitiFlags(command)
 	command.PersistentFlags().Parse(os.Args)
 
-	configFilePath = command.Flag("ZConfig").Value.String()
-	serviceName = command.Flag("Service").Value.String()
+	configFilePath = command.Flag("zConfig").Value.String()
+	serviceName = command.Flag("service").Value.String()
 
 	// TODO: once we switch everything over to Cobra commands, we can go back to calling
 	// cliflag.InitFlags() (by removing its pflag.Parse() call). For now, we have to set the
@@ -94,8 +94,8 @@ func wrapConfigFn(restConfig *rest.Config) *rest.Config {
 
 func setZitiFlags(command *cobra.Command) *cobra.Command {
 
-	command.PersistentFlags().StringVarP(&zFlags.ZConfig, "ZConfig", "c", "", "Path to ziti config file")
-	command.PersistentFlags().StringVarP(&zFlags.Service, "Service", "S", "", "Service name")
+	command.PersistentFlags().StringVarP(&zFlags.zConfig, "zConfig", "c", "", "Path to ziti config file")
+	command.PersistentFlags().StringVarP(&zFlags.service, "service", "S", "", "Service name")
 
 	return command
 }
