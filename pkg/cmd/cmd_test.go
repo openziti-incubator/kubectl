@@ -23,15 +23,15 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/openziti-incubator/kubectl/pkg/cmd/flags"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/kubectl/pkg/cmd/flags"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 )
 
 func TestNormalizationFuncGlobalExistence(t *testing.T) {
 	// This test can be safely deleted when we will not support multiple flag formats
-	root := NewKubectlCommand(os.Stdin, os.Stdout, os.Stderr, nil, flags.ZitiFlags{})
+	root := NewKubectlCommand(os.Stdin, os.Stdout, os.Stderr)
 
 	if root.Parent() != nil {
 		t.Fatal("We expect the root command to be returned")
