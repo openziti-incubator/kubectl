@@ -13,7 +13,7 @@ jobs:
       matrix:
         include:
          - os: ubuntu-latest
-           zkubeclt_artifact_name: zkubectl
+           zkubectl_artifact_name: zkubectl
            zkubectl_asset_name: zkubectl-linux-amd64
          - os: windows-latest
            zkubectl_artifact_name: zkubectl.exe
