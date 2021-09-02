@@ -23,7 +23,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/openziti-incubator/kubectl/pkg/cmd/flags"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
@@ -92,9 +91,7 @@ func TestKubectlCommandHandlesPlugins(t *testing.T) {
 				errOut.Write([]byte(str))
 			})
 
-			zFlags := flags.ZitiFlags{}
-
-			root := NewDefaultKubectlCommandWithArgs(pluginsHandler, test.args, in, out, errOut, nil, zFlags)
+			root := NewDefaultKubectlCommandWithArgs(pluginsHandler, test.args, in, out, errOut)
 			if err := root.Execute(); err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
