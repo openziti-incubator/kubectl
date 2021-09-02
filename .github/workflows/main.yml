@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-v'
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/release-v'
     name: Building on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
