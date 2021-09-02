@@ -1,0 +1,44 @@
+name: build
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-v'
+    name: Building on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+         - os: ubuntu-latest
+           zkubeclt_artifact_name: zkubectl
+           zkubectl_asset_name: zkubectl-linux-amd64
+         - os: windows-latest
+           zkubectl_artifact_name: zkubectl.exe
+           zkubectl_asset_name: zkubectl-windows-amd64.exe
+         - os: macos-latest
+           zkubectl_artifact_name: zkubectl
+           zkubectl_asset_name: zkubectl-macos-amd64
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+
+    - name: Make the build dir
+      run: mkdir "${{ runner.workspace }}/build"
+      
+    - name: Build
+      run: go build -o ${{ runner.workspace }}/build ./...
+
+    - name: Upload zkubectl binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ runner.workspace }}/build/${{ matrix.zkubectl_artifact_name }}
+        asset_name: ${{ matrix.zkubectl_asset_name }}
+        tag: ${{ github.ref }}
