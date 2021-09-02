@@ -49,8 +49,6 @@ type ZitiFlags struct {
 
 var zFlags = ZitiFlags{}
 
-//
-
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
