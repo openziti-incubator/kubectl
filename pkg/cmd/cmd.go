@@ -53,7 +53,6 @@ import (
 	cmdexec "k8s.io/kubectl/pkg/cmd/exec"
 	"k8s.io/kubectl/pkg/cmd/explain"
 	"k8s.io/kubectl/pkg/cmd/expose"
-	"k8s.io/kubectl/pkg/cmd/flags"
 	"k8s.io/kubectl/pkg/cmd/get"
 	"k8s.io/kubectl/pkg/cmd/label"
 	"k8s.io/kubectl/pkg/cmd/logs"
@@ -84,13 +83,17 @@ import (
 const kubectlCmdHeaders = "KUBECTL_COMMAND_HEADERS"
 
 // NewDefaultKubectlCommand creates the `kubectl` command with default arguments
-func NewDefaultKubectlCommand(wrapConfigFn func(restConfig *rest.Config) *rest.Config, zFlags flags.ZitiFlags) *cobra.Command {
-	return NewDefaultKubectlCommandWithArgs(NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes), os.Args, os.Stdin, os.Stdout, os.Stderr, wrapConfigFn, zFlags)
+func NewDefaultKubectlCommand() *cobra.Command {
+	return NewDefaultKubectlCommandWithArgs(NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes), os.Args, os.Stdin, os.Stdout, os.Stderr)
+}
+
+func NewDefaultKubectlCommandWithArgs(pluginHandler PluginHandler, args []string, in io.Reader, out, errout io.Writer) *cobra.Command {
+	return NewDefaultKubectlCommandWithArgsAndConfigFlags(pluginHandler, args, in, out, errout, nil)
 }
 
 // NewDefaultKubectlCommandWithArgs creates the `kubectl` command with arguments
-func NewDefaultKubectlCommandWithArgs(pluginHandler PluginHandler, args []string, in io.Reader, out, errout io.Writer, wrapConfigFn func(restConfig *rest.Config) *rest.Config, zFlags flags.ZitiFlags) *cobra.Command {
-	cmd := NewKubectlCommand(in, out, errout, wrapConfigFn, zFlags)
+func NewDefaultKubectlCommandWithArgsAndConfigFlags(pluginHandler PluginHandler, args []string, in io.Reader, out, errout io.Writer, kubeConfigFlags *genericclioptions.ConfigFlags) *cobra.Command {
+	cmd := NewKubectlCommandWithConfigFLags(in, out, errout, kubeConfigFlags)
 
 	if pluginHandler == nil {
 		return cmd
@@ -217,8 +220,12 @@ func HandlePluginCommand(pluginHandler PluginHandler, cmdArgs []string) error {
 	return nil
 }
 
+func NewKubectlCommand(in io.Reader, out, err io.Writer) *cobra.Command {
+	return NewKubectlCommandWithConfigFLags(in, out, err, nil)
+}
+
 // NewKubectlCommand creates the `kubectl` command and its nested children.
-func NewKubectlCommand(in io.Reader, out, err io.Writer, wrapConfigFn func(restConfig *rest.Config) *rest.Config, zFlags flags.ZitiFlags) *cobra.Command {
+func NewKubectlCommandWithConfigFLags(in io.Reader, out, err io.Writer, kubeConfigFlags *genericclioptions.ConfigFlags) *cobra.Command {
 	warningHandler := rest.NewWarningWriter(err, rest.WarningWriterOptions{Deduplicate: true, Color: term.AllowsColorOutput(err)})
 	warningsAsErrors := false
 	// Parent command to which all subcommands are added.
@@ -267,9 +274,11 @@ func NewKubectlCommand(in io.Reader, out, err io.Writer, wrapConfigFn func(restC
 
 	flags.BoolVar(&warningsAsErrors, "warnings-as-errors", warningsAsErrors, "Treat warnings received from the server as errors and exit with a non-zero exit code")
 
-	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
+	if kubeConfigFlags == nil {
+		kubeConfigFlags = genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
+	}
 	kubeConfigFlags.AddFlags(flags)
-	kubeConfigFlags.WrapConfigFn = wrapConfigFn
+
 	matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
 	matchVersionKubeConfigFlags.AddFlags(cmds.PersistentFlags())
 	// Updates hooks to add kubectl command headers: SIG CLI KEP 859.
@@ -289,10 +298,6 @@ func NewKubectlCommand(in io.Reader, out, err io.Writer, wrapConfigFn func(restC
 	cmds.SetGlobalNormalizationFunc(cliflag.WarnWordSepNormalizeFunc)
 
 	ioStreams := genericclioptions.IOStreams{In: in, Out: out, ErrOut: err}
-
-	cmds.PersistentFlags().StringVarP(&zFlags.ZConfig, "ZConfig", "c", "", "Path to ziti config file")
-	cmds.PersistentFlags().StringVarP(&zFlags.Service, "Service", "S", "", "Service name")
-	cmds.PersistentFlags().BoolVarP(&zFlags.Debug, "Debug", "d", false, "Set debug level logging")
 
 	// Proxy command is incompatible with CommandHeaderRoundTripper, so
 	// clear the WrapConfigFn before running proxy command.
