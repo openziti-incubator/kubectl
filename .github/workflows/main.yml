@@ -7,14 +7,13 @@ on:
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/release-v')
     name: Building on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
          - os: ubuntu-latest
-           zkubeclt_artifact_name: zkubectl
+           zkubectl_artifact_name: zkubectl
            zkubectl_asset_name: zkubectl-linux-amd64
          - os: windows-latest
            zkubectl_artifact_name: zkubectl.exe
