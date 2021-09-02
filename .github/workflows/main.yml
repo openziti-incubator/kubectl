@@ -13,14 +13,14 @@ jobs:
       matrix:
         include:
          - os: ubuntu-latest
-           zkubectl_artifact_name: zkubectl
-           zkubectl_asset_name: zkubectl-linux-amd64
+           kubectl_artifact_name: kubectl
+           kubectl_asset_name: kubectl-linux-amd64
          - os: windows-latest
-           zkubectl_artifact_name: zkubectl.exe
-           zkubectl_asset_name: zkubectl-windows-amd64.exe
+           kubectl_artifact_name: kubectl.exe
+           kubectl_asset_name: kubectl-windows-amd64.exe
          - os: macos-latest
-           zkubectl_artifact_name: zkubectl
-           zkubectl_asset_name: zkubectl-macos-amd64
+           kubectl_artifact_name: kubectl
+           kubectl_asset_name: kubectl-macos-amd64
     steps:
     - uses: actions/checkout@v2
 
@@ -39,6 +39,6 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ runner.workspace }}/build/${{ matrix.zkubectl_artifact_name }}
-        asset_name: ${{ matrix.zkubectl_asset_name }}
+        file: ${{ runner.workspace }}/build/${{ matrix.kubectl_artifact_name }}
+        asset_name: ${{ matrix.kubectl_asset_name }}
         tag: ${{ github.ref }}
