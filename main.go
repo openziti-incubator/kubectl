@@ -18,9 +18,11 @@ package main
 
 import (
 	"context"
+	"flag"
 	"math/rand"
 	"net"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/openziti-incubator/kubectl/pkg/cmd"
@@ -37,6 +39,8 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 )
 
 var configFilePath string
@@ -60,6 +64,24 @@ func main() {
 
 	configFilePath = command.Flag("zConfig").Value.String()
 	serviceName = command.Flag("service").Value.String()
+
+	var kubeconfig *string
+	if home := homedir.HomeDir(); home != "" {
+		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	} else {
+		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	}
+	flag.Parse()
+
+	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	config2 := clientcmd.GetConfigFromFileOrDie(*kubeconfig)
+
+	if err != nil {
+		panic(err)
+	}
+	//context := config2.Contexts[config2.CurrentContext]
+	logrus.Infof("config : ", config2.CurrentContext)
+	logrus.Infof("\nservice: ", config)
 
 	// TODO: once we switch everything over to Cobra commands, we can go back to calling
 	// cliflag.InitFlags() (by removing its pflag.Parse() call). For now, we have to set the
