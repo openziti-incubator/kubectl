@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"os"
@@ -36,6 +37,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	// Import to initialize client auth plugins.
+	"github.com/go-yaml/yaml"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
@@ -51,6 +53,18 @@ type ZitiFlags struct {
 	service string
 }
 
+type Context struct {
+	ZConfig string `yaml:"zConfig"`
+	Service string `yaml:"service"`
+}
+
+type MinKubeConfig struct {
+	Contexts []struct {
+		Context Context `yaml:"context"`
+		Name    string  `yaml:"name"`
+	} `yaml:"contexts"`
+}
+
 var zFlags = ZitiFlags{}
 
 func main() {
@@ -58,30 +72,20 @@ func main() {
 	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
 	kubeConfigFlags.WrapConfigFn = wrapConfigFn
 
-	command := cmd.NewDefaultKubectlCommandWithArgsAndConfigFlags(cmd.NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes), os.Args, os.Stdin, os.Stdout, os.Stderr, kubeConfigFlags)
-	command = setZitiFlags(command)
-	command.PersistentFlags().Parse(os.Args)
-
-	configFilePath = command.Flag("zConfig").Value.String()
-	serviceName = command.Flag("service").Value.String()
-
 	var kubeconfig *string
 	if home := homedir.HomeDir(); home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	} else {
 		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	}
-	flag.Parse()
 
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
-	config2 := clientcmd.GetConfigFromFileOrDie(*kubeconfig)
+	command := cmd.NewDefaultKubectlCommandWithArgsAndConfigFlags(cmd.NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes), os.Args, os.Stdin, os.Stdout, os.Stderr, kubeConfigFlags)
+	command = setZitiFlags(command)
+	command.PersistentFlags().Parse(os.Args)
 
-	if err != nil {
-		panic(err)
-	}
-	//context := config2.Contexts[config2.CurrentContext]
-	logrus.Infof("config : ", config2.CurrentContext)
-	logrus.Infof("\nservice: ", config)
+	configFilePath = command.Flag("zConfig").Value.String()
+	serviceName = command.Flag("service").Value.String()
+	readConfig(kubeconfig)
 
 	// TODO: once we switch everything over to Cobra commands, we can go back to calling
 	// cliflag.InitFlags() (by removing its pflag.Parse() call). For now, we have to set the
@@ -120,4 +124,41 @@ func setZitiFlags(command *cobra.Command) *cobra.Command {
 	command.PersistentFlags().StringVarP(&zFlags.service, "service", "S", "", "Service name")
 
 	return command
+}
+
+func readConfig(kubeconfig *string) {
+
+	config := clientcmd.GetConfigFromFileOrDie(*kubeconfig)
+
+	currentContext := config.CurrentContext
+
+	filename, _ := filepath.Abs(*kubeconfig)
+	yamlFile, err := ioutil.ReadFile(filename)
+
+	if err != nil {
+		panic(err)
+	}
+
+	var minKubeConfig MinKubeConfig
+
+	err = yaml.Unmarshal(yamlFile, &minKubeConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	var context Context
+	for _, ctx := range minKubeConfig.Contexts {
+
+		if ctx.Name == currentContext {
+			context = ctx.Context
+		}
+	}
+
+	if configFilePath == "" {
+		configFilePath = context.ZConfig
+	}
+
+	if serviceName == "" {
+		serviceName = context.Service
+	}
 }
