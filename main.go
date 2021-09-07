@@ -41,7 +41,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
 )
 
 var configFilePath string
@@ -78,7 +77,10 @@ func main() {
 	configFilePath = command.Flag("zConfig").Value.String()
 	serviceName = command.Flag("service").Value.String()
 
-	//readConfig(getKubeconfigPath(command))
+	// get the loaded kubeconfig
+	kubeconfig := getKubeconfig()
+
+	readConfig(getKubeconfigPath(command, kubeconfig))
 
 	// TODO: once we switch everything over to Cobra commands, we can go back to calling
 	// cliflag.InitFlags() (by removing its pflag.Parse() call). For now, we have to set the
@@ -119,18 +121,36 @@ func setZitiFlags(command *cobra.Command) *cobra.Command {
 	return command
 }
 
-func getKubeconfigPath(command *cobra.Command) string {
-	kubeconfig := command.Flag("kubeconfig").Value.String()
+func getKubeconfig() clientcmd.ClientConfig {
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	configOverrides := &clientcmd.ConfigOverrides{}
+	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules,
+		configOverrides)
 
-	home := homedir.HomeDir()
-	if kubeconfig == "" && home != "" {
-		kubeconfig = filepath.Join(home, ".kube", "config")
-	} else if home == "" {
-		logrus.Error("Could not find kubeconfig file in the default location")
-		os.Exit(1)
+	return kubeConfig
+}
+
+func getKubeconfigPath(command *cobra.Command, kubeconfig clientcmd.ClientConfig) string {
+	kubeconfigPath := command.Flag("kubeconfig").Value.String()
+	kubeconfigPrcedence := kubeconfig.ConfigAccess().GetLoadingPrecedence()
+
+	if kubeconfigPath == "" {
+		apiConfig, err := kubeconfig.RawConfig()
+
+		if err != nil {
+			panic(err)
+		}
+
+		for _, path := range kubeconfigPrcedence {
+			config := clientcmd.GetConfigFromFileOrDie(path)
+			if apiConfig.CurrentContext == config.CurrentContext {
+				kubeconfigPath = path
+				break
+			}
+		}
 	}
 
-	return kubeconfig
+	return kubeconfigPath
 }
 
 func readConfig(kubeconfig string) {
