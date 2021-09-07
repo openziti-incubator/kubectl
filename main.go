@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"io/ioutil"
 	"math/rand"
 	"net"
@@ -72,20 +71,14 @@ func main() {
 	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
 	kubeConfigFlags.WrapConfigFn = wrapConfigFn
 
-	var kubeconfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-
 	command := cmd.NewDefaultKubectlCommandWithArgsAndConfigFlags(cmd.NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes), os.Args, os.Stdin, os.Stdout, os.Stderr, kubeConfigFlags)
 	command = setZitiFlags(command)
 	command.PersistentFlags().Parse(os.Args)
 
 	configFilePath = command.Flag("zConfig").Value.String()
 	serviceName = command.Flag("service").Value.String()
-	readConfig(kubeconfig)
+
+	//readConfig(getKubeconfigPath(command))
 
 	// TODO: once we switch everything over to Cobra commands, we can go back to calling
 	// cliflag.InitFlags() (by removing its pflag.Parse() call). For now, we have to set the
@@ -104,7 +97,7 @@ func dialFunc(ctx context.Context, network, address string) (net.Conn, error) {
 	configFile, err := config.NewFromFile(configFilePath)
 
 	if err != nil {
-		logrus.WithError(err).Error("Error loading config file")
+		logrus.WithError(err).Error("Error loading ziti config file")
 		os.Exit(1)
 	}
 
@@ -126,13 +119,29 @@ func setZitiFlags(command *cobra.Command) *cobra.Command {
 	return command
 }
 
-func readConfig(kubeconfig *string) {
+func getKubeconfigPath(command *cobra.Command) string {
+	kubeconfig := command.Flag("kubeconfig").Value.String()
 
-	config := clientcmd.GetConfigFromFileOrDie(*kubeconfig)
+	home := homedir.HomeDir()
+	if kubeconfig == "" && home != "" {
+		kubeconfig = filepath.Join(home, ".kube", "config")
+	} else if home == "" {
+		logrus.Error("Could not find kubeconfig file in the default location")
+		os.Exit(1)
+	}
+
+	return kubeconfig
+}
+
+func readConfig(kubeconfig string) {
+
+	logrus.Infof("kubeconfig: ", kubeconfig)
+
+	config := clientcmd.GetConfigFromFileOrDie(kubeconfig)
 
 	currentContext := config.CurrentContext
 
-	filename, _ := filepath.Abs(*kubeconfig)
+	filename, _ := filepath.Abs(kubeconfig)
 	yamlFile, err := ioutil.ReadFile(filename)
 
 	if err != nil {
