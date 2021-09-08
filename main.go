@@ -68,19 +68,28 @@ var zFlags = ZitiFlags{}
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
+
+	// set the wrapper function. This allows modification to the reset Config
 	kubeConfigFlags.WrapConfigFn = wrapConfigFn
 
+	// create the cobra command and set ConfigFlags
 	command := cmd.NewDefaultKubectlCommandWithArgsAndConfigFlags(cmd.NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes), os.Args, os.Stdin, os.Stdout, os.Stderr, kubeConfigFlags)
+
+	//set and parse the ziti flags
 	command = setZitiFlags(command)
 	command.PersistentFlags().Parse(os.Args)
 
+	// try to get the ziti options from the flags
 	configFilePath = command.Flag("zConfig").Value.String()
 	serviceName = command.Flag("service").Value.String()
 
 	// get the loaded kubeconfig
 	kubeconfig := getKubeconfig()
 
-	parseKubeConfig(command, kubeconfig)
+	// if both the config file and service name are not set, parse the kubeconfig file
+	if configFilePath == "" || serviceName == "" {
+		parseKubeConfig(command, kubeconfig)
+	}
 
 	// TODO: once we switch everything over to Cobra commands, we can go back to calling
 	// cliflag.InitFlags() (by removing its pflag.Parse() call). For now, we have to set the
@@ -94,6 +103,7 @@ func main() {
 	}
 }
 
+// function for handling the dialing with ziti
 func dialFunc(ctx context.Context, network, address string) (net.Conn, error) {
 	service := serviceName
 	configFile, err := config.NewFromFile(configFilePath)
@@ -121,6 +131,7 @@ func setZitiFlags(command *cobra.Command) *cobra.Command {
 	return command
 }
 
+// function for getting the current kubeconfig
 func getKubeconfig() clientcmd.ClientConfig {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	configOverrides := &clientcmd.ConfigOverrides{}
@@ -131,41 +142,65 @@ func getKubeconfig() clientcmd.ClientConfig {
 }
 
 func parseKubeConfig(command *cobra.Command, kubeconfig clientcmd.ClientConfig) {
+	// attempt to get the kubeconfig path from the command flags
 	kubeconfigPath := command.Flag("kubeconfig").Value.String()
-	kubeconfigPrcedence := kubeconfig.ConfigAccess().GetLoadingPrecedence()
 
+	// if the path is not set, attempt to get it from the kubeconfig precedence
 	if kubeconfigPath == "" {
+		// obtain the list of kubeconfig files from the current kubeconfig
+		kubeconfigPrcedence := kubeconfig.ConfigAccess().GetLoadingPrecedence()
+
+		// get the raw API config
 		apiConfig, err := kubeconfig.RawConfig()
 
 		if err != nil {
 			panic(err)
 		}
 
-		for _, path := range kubeconfigPrcedence {
+		// set the ziti options from one of the config files
+		getZitiOptionsFromConfigList(kubeconfigPrcedence, apiConfig.CurrentContext)
 
-			config := readKubeConfig(path)
-			for _, context := range config.Contexts {
-				if apiConfig.CurrentContext == context.Name {
-					if configFilePath == "" {
-						configFilePath = context.Context.ZConfig
-					}
-
-					if serviceName == "" {
-						serviceName = context.Context.Service
-					}
-
-					break
-				}
-			}
-		}
 	} else {
+		// get the ziti options form the specified path
 		getZitiOptionsFromConfig(kubeconfigPath)
 	}
 
 }
 
+func getZitiOptionsFromConfigList(kubeconfigPrcedence []string, currentContext string) {
+	// for the kubeconfig files in the precedence
+	for _, path := range kubeconfigPrcedence {
+
+		// read the config file
+		config := readKubeConfig(path)
+
+		// loop through the context list
+		for _, context := range config.Contexts {
+
+			// if the context name matches the current context
+			if currentContext == context.Name {
+
+				// set the config file path if it's not already set
+				if configFilePath == "" {
+					configFilePath = context.Context.ZConfig
+				}
+
+				// set the service name if it's not already set
+				if serviceName == "" {
+					serviceName = context.Context.Service
+				}
+
+				break
+			}
+		}
+	}
+}
+
 func readKubeConfig(kubeconfig string) MinKubeConfig {
+	// get the file name from the path
 	filename, _ := filepath.Abs(kubeconfig)
+
+	// read the yaml file
 	yamlFile, err := ioutil.ReadFile(filename)
 
 	if err != nil {
@@ -174,6 +209,7 @@ func readKubeConfig(kubeconfig string) MinKubeConfig {
 
 	var minKubeConfig MinKubeConfig
 
+	//parse the yaml file
 	err = yaml.Unmarshal(yamlFile, &minKubeConfig)
 	if err != nil {
 		panic(err)
@@ -185,13 +221,17 @@ func readKubeConfig(kubeconfig string) MinKubeConfig {
 
 func getZitiOptionsFromConfig(kubeconfig string) {
 
+	// get the config from the path
 	config := clientcmd.GetConfigFromFileOrDie(kubeconfig)
 
+	// get the current context
 	currentContext := config.CurrentContext
 
+	// read the yaml file
 	minKubeConfig := readKubeConfig(kubeconfig)
 
 	var context Context
+	// find the context that matches the current context
 	for _, ctx := range minKubeConfig.Contexts {
 
 		if ctx.Name == currentContext {
@@ -199,10 +239,12 @@ func getZitiOptionsFromConfig(kubeconfig string) {
 		}
 	}
 
+	// set the config file if not already set
 	if configFilePath == "" {
 		configFilePath = context.ZConfig
 	}
 
+	// set the service name if not already set
 	if serviceName == "" {
 		serviceName = context.Service
 	}
