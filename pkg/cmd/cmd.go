@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
@@ -88,9 +87,13 @@ func NewDefaultKubectlCommand() *cobra.Command {
 	return NewDefaultKubectlCommandWithArgs(NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes), os.Args, os.Stdin, os.Stdout, os.Stderr)
 }
 
-// NewDefaultKubectlCommandWithArgs creates the `kubectl` command with arguments
 func NewDefaultKubectlCommandWithArgs(pluginHandler PluginHandler, args []string, in io.Reader, out, errout io.Writer) *cobra.Command {
-	cmd := NewKubectlCommand(in, out, errout)
+	return NewDefaultKubectlCommandWithArgsAndConfigFlags(pluginHandler, args, in, out, errout, nil)
+}
+
+// NewDefaultKubectlCommandWithArgs creates the `kubectl` command with arguments
+func NewDefaultKubectlCommandWithArgsAndConfigFlags(pluginHandler PluginHandler, args []string, in io.Reader, out, errout io.Writer, kubeConfigFlags *genericclioptions.ConfigFlags) *cobra.Command {
+	cmd := NewKubectlCommandWithConfigFLags(in, out, errout, kubeConfigFlags)
 
 	if pluginHandler == nil {
 		return cmd
@@ -217,8 +220,12 @@ func HandlePluginCommand(pluginHandler PluginHandler, cmdArgs []string) error {
 	return nil
 }
 
-// NewKubectlCommand creates the `kubectl` command and its nested children.
 func NewKubectlCommand(in io.Reader, out, err io.Writer) *cobra.Command {
+	return NewKubectlCommandWithConfigFLags(in, out, err, nil)
+}
+
+// NewKubectlCommand creates the `kubectl` command and its nested children.
+func NewKubectlCommandWithConfigFLags(in io.Reader, out, err io.Writer, kubeConfigFlags *genericclioptions.ConfigFlags) *cobra.Command {
 	warningHandler := rest.NewWarningWriter(err, rest.WarningWriterOptions{Deduplicate: true, Color: term.AllowsColorOutput(err)})
 	warningsAsErrors := false
 	// Parent command to which all subcommands are added.
@@ -267,15 +274,17 @@ func NewKubectlCommand(in io.Reader, out, err io.Writer) *cobra.Command {
 
 	flags.BoolVar(&warningsAsErrors, "warnings-as-errors", warningsAsErrors, "Treat warnings received from the server as errors and exit with a non-zero exit code")
 
-	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
+	if kubeConfigFlags == nil {
+		kubeConfigFlags = genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
+	}
 	kubeConfigFlags.AddFlags(flags)
+
 	matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
 	matchVersionKubeConfigFlags.AddFlags(cmds.PersistentFlags())
 	// Updates hooks to add kubectl command headers: SIG CLI KEP 859.
 	addCmdHeaderHooks(cmds, kubeConfigFlags)
 
 	cmds.PersistentFlags().AddGoFlagSet(flag.CommandLine)
-
 	f := cmdutil.NewFactory(matchVersionKubeConfigFlags)
 
 	// Sending in 'nil' for the getLanguageFn() results in using
@@ -395,6 +404,10 @@ func NewKubectlCommand(in io.Reader, out, err io.Writer) *cobra.Command {
 	return cmds
 }
 
+func AddCmdHeaderHooks(cmds *cobra.Command, kubeConfigFlags *genericclioptions.ConfigFlags) {
+	addCmdHeaderHooks(cmds, kubeConfigFlags)
+}
+
 // addCmdHeaderHooks performs updates on two hooks:
 //   1) Modifies the passed "cmds" persistent pre-run function to parse command headers.
 //      These headers will be subsequently added as X-headers to every
@@ -423,13 +436,13 @@ func addCmdHeaderHooks(cmds *cobra.Command, kubeConfigFlags *genericclioptions.C
 		return existingPreRunE(cmd, args)
 	}
 	// Wraps CommandHeaderRoundTripper around standard RoundTripper.
-	kubeConfigFlags.WrapConfigFn = func(c *rest.Config) *rest.Config {
+	/*kubeConfigFlags.WrapConfigFn = func(c *rest.Config) *rest.Config {
 		c.Wrap(func(rt http.RoundTripper) http.RoundTripper {
 			crt.Delegate = rt
 			return crt
 		})
 		return c
-	}
+	}*/
 }
 
 func runHelp(cmd *cobra.Command, args []string) {
