@@ -80,7 +80,7 @@ func main() {
 	// get the loaded kubeconfig
 	kubeconfig := getKubeconfig()
 
-	readConfig(getKubeconfigPath(command, kubeconfig))
+	parseKubeConfig(command, kubeconfig)
 
 	// TODO: once we switch everything over to Cobra commands, we can go back to calling
 	// cliflag.InitFlags() (by removing its pflag.Parse() call). For now, we have to set the
@@ -130,7 +130,7 @@ func getKubeconfig() clientcmd.ClientConfig {
 	return kubeConfig
 }
 
-func getKubeconfigPath(command *cobra.Command, kubeconfig clientcmd.ClientConfig) string {
+func parseKubeConfig(command *cobra.Command, kubeconfig clientcmd.ClientConfig) {
 	kubeconfigPath := command.Flag("kubeconfig").Value.String()
 	kubeconfigPrcedence := kubeconfig.ConfigAccess().GetLoadingPrecedence()
 
@@ -142,25 +142,29 @@ func getKubeconfigPath(command *cobra.Command, kubeconfig clientcmd.ClientConfig
 		}
 
 		for _, path := range kubeconfigPrcedence {
-			config := clientcmd.GetConfigFromFileOrDie(path)
-			if apiConfig.CurrentContext == config.CurrentContext {
-				kubeconfigPath = path
-				break
+
+			config := readKubeConfig(path)
+			for _, context := range config.Contexts {
+				if apiConfig.CurrentContext == context.Name {
+					if configFilePath == "" {
+						configFilePath = context.Context.ZConfig
+					}
+
+					if serviceName == "" {
+						serviceName = context.Context.Service
+					}
+
+					break
+				}
 			}
 		}
+	} else {
+		getZitiOptionsFromConfig(kubeconfigPath)
 	}
 
-	return kubeconfigPath
 }
 
-func readConfig(kubeconfig string) {
-
-	logrus.Infof("kubeconfig: ", kubeconfig)
-
-	config := clientcmd.GetConfigFromFileOrDie(kubeconfig)
-
-	currentContext := config.CurrentContext
-
+func readKubeConfig(kubeconfig string) MinKubeConfig {
 	filename, _ := filepath.Abs(kubeconfig)
 	yamlFile, err := ioutil.ReadFile(filename)
 
@@ -174,6 +178,18 @@ func readConfig(kubeconfig string) {
 	if err != nil {
 		panic(err)
 	}
+
+	return minKubeConfig
+
+}
+
+func getZitiOptionsFromConfig(kubeconfig string) {
+
+	config := clientcmd.GetConfigFromFileOrDie(kubeconfig)
+
+	currentContext := config.CurrentContext
+
+	minKubeConfig := readKubeConfig(kubeconfig)
 
 	var context Context
 	for _, ctx := range minKubeConfig.Contexts {
