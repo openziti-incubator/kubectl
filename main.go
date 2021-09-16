@@ -50,6 +50,8 @@ type ZitiFlags struct {
 var zFlags = ZitiFlags{}
 
 func main() {
+	logrus.SetLevel(logrus.WarnLevel)
+
 	rand.Seed(time.Now().UnixNano())
 	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
 	kubeConfigFlags.WrapConfigFn = wrapConfigFn
