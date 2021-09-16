@@ -14,6 +14,7 @@ require (
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d
 	github.com/fatih/camelcase v1.0.0
 	github.com/fvbommel/sortorder v1.0.1
+	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/google/go-cmp v0.5.6
 	github.com/googleapis/gnostic v0.5.5
 	github.com/jonboulle/clockwork v0.2.2
