@@ -125,7 +125,7 @@ func wrapConfigFn(restConfig *rest.Config) *rest.Config {
 
 func setZitiFlags(command *cobra.Command) *cobra.Command {
 
-	command.PersistentFlags().StringVarP(&zFlags.zConfig, "zConfig", "c", "", "Path to ziti config file")
+	command.PersistentFlags().StringVarP(&zFlags.zConfig, "zConfig", "C", "", "Path to ziti config file")
 	command.PersistentFlags().StringVarP(&zFlags.service, "service", "S", "", "Service name")
 
 	return command
